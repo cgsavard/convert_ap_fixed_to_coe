@@ -7,7 +7,7 @@
  * https://www.xilinx.com/support/documentation/sw_manuals/xilinx11/cgn_r_coe_file_syntax.htm
  *
  * To run:
- *   $ make convert
+ *   $ make run
  *   $ ./convert
  *
  * Things to change before running script:
@@ -26,42 +26,86 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <bits/stdc++.h>
+#include <bitset>
 
 #include "convert.h"
 
 using namespace std;
 
-string get_str_num(input_t num){
+// from https://www.geeksforgeeks.org/efficient-method-2s-complement-binary-string/
+// Function to find two's complement 
+string findTwoscomplement(string str) 
+{ 
+  int n = str.length(); 
+  
+  // Traverse the string to get first '1' from 
+  // the last of string 
+  int i; 
+  for (i = n-1 ; i >= 0 ; i--) 
+    if (str[i] == '1') 
+      break; 
+  
+  // If there exists no '1' concatenate 1 at the 
+  // starting of string 
+  if (i == -1) 
+    return '1' + str; 
+  
+  // Continue traversal after the position of 
+  // first '1' 
+  for (int k = i-1 ; k >= 0; k--) 
+    { 
+      //Just flip the values 
+      if (str[k] == '1') 
+	str[k] = '0'; 
+      else
+	str[k] = '1'; 
+    } 
+  
+  // return the modified string 
+  return str;
+} 
 
-  string temp_str_num = num.to_string();
+// adapted from https://www.geeksforgeeks.org/convert-decimal-fraction-binary-number/
+string decimalToBinary(float num){
+ 
+  bool sign = 0;
+  if (num<0) sign = 1;
+  num = abs(num);
 
-  string sign = "";
-  //start with the sign  
-  if (temp_str_num.at(0) == '-'){
-    sign = "1";
-  }else{
-    sign = "0";
-  }
+  string binary = ""; 
+  
+  // Fetch the integral part of decimal number 
+  int Integral = num; 
+  
+  // Fetch the fractional part decimal number 
+  float fractional = num - Integral; 
+  
+  string int_bin = bitset<nint-1>(Integral).to_string();
 
-  //grab integer and decimal parts then zero-pad
-  int b = temp_str_num.find('b');
-  int per = temp_str_num.find('.');
-  string dec_part = "";
-  if (per == -1){
-    per = temp_str_num.length();
-  }else{ 
-    dec_part = temp_str_num.substr(per+1);
-  }  
-  string int_part = string(&temp_str_num[b+2], &temp_str_num[per]);
+  binary = binary+int_bin;
+  
+  // Conversion of fractional part to 
+  // binary equivalent
+  int k_prec = nbits-nint; 
+  while (k_prec--) { 
+    // Find next bit in fraction 
+    fractional *= 2; 
+    int fract_bit = fractional; 
+  
+    if (fract_bit == 1){ 
+      fractional -= fract_bit; 
+      binary.push_back(1 + '0'); 
+    } else binary.push_back(0 + '0'); 
+  } 
+  
+  if (sign){
+    binary = findTwoscomplement(binary);
+    binary = "1"+binary;
+  }else binary = "0"+binary;
 
-  dec_part = dec_part.append(ndec-dec_part.length(),'0');
-  int_part = int_part.insert(0, nbits-ndec-1-int_part.length(),'0');
-
-  //put full string together
-  string str_num = sign+int_part+dec_part;
-
-  return str_num;
-}
+  return binary; 
+} 
 
 int main() {
 
@@ -74,7 +118,7 @@ int main() {
   }
   ofstream output;
   output.open("converted/y.coe");
-  output << "memory_initialization_radix=2\n";
+  output << "memory_initialization_radix=2;\n";
   output << "memory_initialization_vector=";
 
   input_t feat;
@@ -82,7 +126,7 @@ int main() {
     string row = "";
     for (int j=0; j<nfeat; j++){
       input >> feat;
-      row = row + get_str_num(feat);
+      row = row + decimalToBinary(feat);
     }
     output << row;
     if (i != N-1) output << ',' << endl;
